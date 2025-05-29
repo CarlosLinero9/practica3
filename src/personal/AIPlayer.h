@@ -71,6 +71,9 @@ public:
    float Minimax_Limitado(const Parchis &actual, int jugador, int profundidad, int profundidad_max,
       color &c_piece, int &id_piece, int &dice, Heuristic *heuristic) const;
 
+   double Poda_AlfaBeta(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+      int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
+
    /**
     * @brief Método que determina si el player es inteligente (decide el mejor movimiento)
     * o no. True para AIPlayer.

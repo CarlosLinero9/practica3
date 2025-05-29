@@ -23,63 +23,65 @@ bool AIPlayer::move(){
 
 void AIPlayer::think(color& c_piece, int& id_piece, int& dice) const{
   
-   float valor; // Almacena el valor con el que se etiqueta el estado tras el proceso de busqueda.
+   // float valor; // Almacena el valor con el que se etiqueta el estado tras el proceso de busqueda.
 
-   // Defino las heurísticas que quiera usar.
-   ValoracionTest valoracionTest;   
-   switch(id){
-      case 0:
-      thinkAleatorio(c_piece, id_piece, dice);
-      break;
+   // // Defino las heurísticas que quiera usar.
+   // ValoracionTest valoracionTest;   
+   // switch(id){
+   //    case 0:
+   //    thinkAleatorio(c_piece, id_piece, dice);
+   //    break;
 
-      case 1:
-      thinkFichaMasAdelantada(c_piece, id_piece, dice);
-      break;
+   //    case 1:
+   //    thinkFichaMasAdelantada(c_piece, id_piece, dice);
+   //    break;
 
-      case 2:
-      thinkMejorOpcion(c_piece, id_piece, dice);
-      break;
+   //    case 2:
+   //    thinkMejorOpcion(c_piece, id_piece, dice);
+   //    break;
 
-      case 3:
-      valor = Minimax(*actual, jugador, 0, PROFUNDIDAD_MINIMAX, c_piece, id_piece, dice, &valoracionTest);
-      break;
-   }
-   cout << "Valor MiniMax: " << valor << "Accion: " << str(c_piece) << " " << id_piece << " " 
-   << dice << endl;
+   //    case 3:
+   //    valor = Minimax(*actual, jugador, 0, PROFUNDIDAD_MINIMAX, c_piece, id_piece, dice, &valoracionTest);
+   //    break;
+   // }
+   // cout << "Valor MiniMax: " << valor << "Accion: " << str(c_piece) << " " << id_piece << " " 
+   // << dice << endl;
 
 
 
    // El siguiente código se proporciona como sugerencia para iniciar la implementación del agente.
 
-   /*DESCOMENTAR*/
-   //float valor; // Almacena el valor con el que se etiqueta el estado tras el proceso de busqueda.
+   float valor; // Almacena el valor con el que se etiqueta el estado tras el proceso de busqueda.
    float alpha = menosinf, beta = masinf; // Cotas iniciales de la poda AlfaBeta
    // Llamada a la función para la poda (los parámetros son solo una sugerencia, se pueden modificar).
-   //ValoracionTest valoracionTest;
+   ValoracionTest valoracionTest;
 
    // ----------------------------------------------------------------- //
 
    // Si quiero poder manejar varios comportamientos, puedo usar la variable id del agente para usar una u otra.
-   // switch (id)
-   // {
-   // case 0:
-   //    // Mi implementación base de la poda con ValoracionTest
-   //    valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &valoracionTest);
-   //    break;
-   // case 1:
-   //    // Mi implementación definitiva con la que gano a todos los ninjas.
-   //    valor = Poda_Final2DefinitivaAhoraSi(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion3);
-   //    break;
-   // case 2:
-   //    // Las distintas pruebas que he realizado (primera prueba)
-   //    valor = Poda_AlfaBeta_Mejorada(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion1);
-   //    break;
-   // case 3:
-   //    // Las distintas pruebas que he realizado (segunda prueba)
-   //    valor = Poda_AlfaBeta_SegundaMejora(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion1);
-   //    break;
-   //  // ...
-   // }
+   switch (id)
+   {
+   case 0:
+      // Mi implementación base de la poda con ValoracionTest
+      valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &valoracionTest);
+      break;
+   case 1:
+      // Mi implementación definitiva con la que gano a todos los ninjas.
+      thinkAleatorio(c_piece, id_piece, dice);
+      //valor = Poda_Final2DefinitivaAhoraSi(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion3);
+      break;
+   case 2:
+      // Las distintas pruebas que he realizado (primera prueba)
+      thinkFichaMasAdelantada(c_piece, id_piece, dice);
+      //valor = Poda_AlfaBeta_Mejorada(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion1);
+      break;
+   case 3:
+      // Las distintas pruebas que he realizado (segunda prueba)
+      thinkMejorOpcion(c_piece, id_piece, dice);
+      //valor = Poda_AlfaBeta_SegundaMejora(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion1);
+      break;
+    // ...
+   }
 
 }
 
@@ -398,7 +400,50 @@ float AIPlayer::Minimax_Limitado(const Parchis &actual, int jugador, int profund
     }
 }
 
+double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+   int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const{
+      if(profundidad == profundidad_max || actual.gameOver()){
+         return heuristic->evaluate(actual, jugador);
+      }
 
+      ParchisBros hijos = actual.getChildren();
+
+      if(jugador == actual.getCurrentPlayerId()){
+         for(ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it){
+            Parchis hijo = *it;
+
+            double valor = Poda_AlfaBeta(hijo, jugador, profundidad+1, profundidad_max, c_piece, id_piece, dice, alpha,
+             beta, heuristic);
+
+            if(alpha < valor){
+               alpha = valor;
+
+               if(profundidad == 0){
+                  c_piece = it.getMovedColor();
+                  id_piece = it.getMovedPieceId();
+                  dice = it.getMovedDiceValue();
+               }
+
+               if(beta <= alpha) return beta;
+            }
+         }
+
+         return alpha;
+      }else{
+         for(ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it){
+            Parchis hijo = *it;
+
+            double valor = Poda_AlfaBeta(hijo, jugador, profundidad+1, profundidad_max, c_piece, 
+            id_piece, dice, alpha, beta, heuristic);
+
+            if(valor < beta){
+               beta = valor;
+               if(beta <= alpha) return alpha;
+            }
+         }
+         return beta;
+      }
+   }
 
 
 float ValoracionTest::getHeuristic(const Parchis& estado, int jugador) const{
