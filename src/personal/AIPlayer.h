@@ -74,6 +74,24 @@ public:
    double Poda_AlfaBeta(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
       int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
 
+   double Poda_AlfaBeta_Dinamica(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+      int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
+
+   double Poda_AlfaBeta_Ordenacion(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+      int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
+   
+   double Poda_AlfaBeta_Probabilistica(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+      int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
+
+   double Poda_AlfaBeta_Quiescence(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+      int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
+
+
+   bool esEstadoQuieto(const Parchis &estado) const;
+
+   double buscarQuietud(const Parchis &actual, int jugador, int profundidad, 
+                        double alpha, double beta, Heuristic *heuristic) const;
+
    /**
     * @brief Método que determina si el player es inteligente (decide el mejor movimiento)
     * o no. True para AIPlayer.

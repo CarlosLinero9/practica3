@@ -6,6 +6,7 @@ const float gana = masinf / 10.f, pierde = menosinf / 10.f;
 const int num_pieces = 2;
 const int PROFUNDIDAD_MINIMAX = 4; // Umbral maximo de profundidad para el metodo MiniMax
 const int PROFUNDIDAD_ALFABETA = 8; // Umbral maximo de profundidad para la poda Alfa_Beta
+const double EPSILON = 0.5; // Umbral para la poda probabilística
 
 bool AIPlayer::move(){
    cout << COUT_ORANGE_BOLD << "Realizo un movimiento automatico" << COUT_NOCOLOR << endl;
@@ -81,6 +82,18 @@ void AIPlayer::think(color& c_piece, int& id_piece, int& dice) const{
       //valor = Poda_AlfaBeta_SegundaMejora(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion1);
       break;
     // ...
+   case 4:
+      valor = Poda_AlfaBeta_Dinamica(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &valoracionTest);
+      break;
+   case 5:
+      valor = Poda_AlfaBeta_Ordenacion(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &valoracionTest);
+      break;
+   case 6:
+      valor = Poda_AlfaBeta_Probabilistica(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &valoracionTest);
+      break;
+   case 7:
+      valor = Poda_AlfaBeta_Quiescence(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &valoracionTest);
+      break;
    }
 
 }
@@ -445,6 +458,347 @@ double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundid
       }
    }
 
+   double AIPlayer::Poda_AlfaBeta_Dinamica(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+      int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const{
+         if(profundidad == profundidad_max || actual.gameOver()){
+            return heuristic->evaluate(actual, jugador);
+         }
+   
+         ParchisBros hijos = actual.getChildren();
+
+         std::vector<ParchisBros::Iterator> hijos_guardados;
+         for(auto it = hijos.begin(); it != hijos.end(); ++it){
+            hijos_guardados.push_back(it);
+         }
+         int ramificacion = hijos_guardados.size();
+
+         int profundidad_max_local = profundidad_max;
+
+         int dados_disponibles = actual.getAvailableNormalDices(actual.getCurrentPlayerId()).size();
+
+         int fichas_disponibles = 0;
+         for (int dado : actual.getAvailableNormalDices(actual.getCurrentPlayerId())) {
+            const vector<tuple<color, int>>& piezas = actual.getAvailablePieces(actual.getCurrentColor(), dado);
+            fichas_disponibles += piezas.size();
+         }
+
+         if(ramificacion <= (dados_disponibles * fichas_disponibles)/2){
+            profundidad_max_local+=1;
+         }
+   
+         if(jugador == actual.getCurrentPlayerId()){
+            for(int i = 0; i < ramificacion; i++){
+               Parchis hijo = *hijos_guardados[i];
+   
+               double valor = Poda_AlfaBeta_Dinamica(hijo, jugador, profundidad+1, profundidad_max_local, c_piece, id_piece, dice, alpha,
+                beta, heuristic);
+   
+               if(alpha < valor){
+                  alpha = valor;
+   
+                  if(profundidad == 0){
+                     c_piece = hijos_guardados[i].getMovedColor();
+                     id_piece = hijos_guardados[i].getMovedPieceId();
+                     dice = hijos_guardados[i].getMovedDiceValue();
+                  }
+   
+                  if(beta <= alpha) return beta;
+               }
+            }
+   
+            return alpha;
+         }else{
+            for(int i = 0; i < ramificacion; i++){
+               Parchis hijo = *hijos_guardados[i];
+   
+               double valor = Poda_AlfaBeta_Dinamica(hijo, jugador, profundidad+1, profundidad_max_local, c_piece, 
+               id_piece, dice, alpha, beta, heuristic);
+   
+               if(valor < beta){
+                  beta = valor;
+                  if(beta <= alpha) return alpha;
+               }
+            }
+            return beta;
+         }
+      }
+
+   double AIPlayer::Poda_AlfaBeta_Ordenacion(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+   int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const{
+      if(profundidad == profundidad_max || actual.gameOver()){
+         return heuristic->evaluate(actual, jugador);
+      }
+
+      ParchisBros hijos = actual.getChildren();
+      std::vector<std::pair<double, ParchisBros::Iterator>> valores_hijos;
+
+      for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it) {
+         Parchis hijo = *it;
+         double valor_heuristico = heuristic->evaluate(hijo, jugador);
+         valores_hijos.push_back({valor_heuristico, it});
+      }
+
+      // Ordenar los hijos según el tipo de nodo (MAX o MIN)
+      if (jugador == actual.getCurrentPlayerId()) {
+         // Nodo MAX: ordenar de mayor a menor
+         std::sort(valores_hijos.begin(), valores_hijos.end(),
+                  [](const std::pair<double, ParchisBros::Iterator>& a,
+                     const std::pair<double, ParchisBros::Iterator>& b) {
+                     return a.first > b.first; // Comparar solo el double
+                  });
+      } else {
+         // Nodo MIN: ordenar de menor a mayor
+         std::sort(valores_hijos.begin(), valores_hijos.end(),
+                  [](const std::pair<double, ParchisBros::Iterator>& a,
+                     const std::pair<double, ParchisBros::Iterator>& b) {
+                     return a.first < b.first; // Comparar solo el double
+                  });
+      }
+
+      if(jugador == actual.getCurrentPlayerId()){
+         for(int i = 0; i < valores_hijos.size(); i++){
+            Parchis hijo = *valores_hijos[i].second;
+
+            double valor = Poda_AlfaBeta_Ordenacion(hijo, jugador, profundidad+1, profundidad_max, c_piece, id_piece, dice, alpha,
+             beta, heuristic);
+
+            if(alpha < valor){
+               alpha = valor;
+
+               if(profundidad == 0){
+                  c_piece = valores_hijos[i].second.getMovedColor();
+                  id_piece = valores_hijos[i].second.getMovedPieceId();
+                  dice = valores_hijos[i].second.getMovedDiceValue();
+               }
+
+               if(beta <= alpha) return beta;
+            }
+         }
+
+         return alpha;
+      }else{
+         for(int i = 0; i < valores_hijos.size(); i++){
+            Parchis hijo = *valores_hijos[i].second;
+
+            double valor = Poda_AlfaBeta_Ordenacion(hijo, jugador, profundidad+1, profundidad_max, c_piece, 
+            id_piece, dice, alpha, beta, heuristic);
+
+            if(valor < beta){
+               beta = valor;
+               if(beta <= alpha) return alpha;
+            }
+         }
+         return beta;
+      }
+   }
+
+
+
+   double AIPlayer::Poda_AlfaBeta_Probabilistica(const Parchis &actual, int jugador, int profundidad, int profundidad_max, 
+      color& c_piece, int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const {
+
+    if (profundidad == profundidad_max || actual.gameOver()) {
+        return heuristic->evaluate(actual, jugador);
+    }
+
+    ParchisBros hijos = actual.getChildren();
+
+    if (jugador == actual.getCurrentPlayerId()) { // Nodo MAX
+        for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it) {
+            Parchis hijo = *it;
+
+            double valor = Poda_AlfaBeta_Probabilistica(hijo, jugador, profundidad + 1, profundidad_max, 
+                                                        c_piece, id_piece, dice, alpha, beta, heuristic);
+
+            if (valor > alpha) {
+                alpha = valor;
+
+                if (profundidad == 0) {
+                    c_piece = it.getMovedColor();
+                    id_piece = it.getMovedPieceId();
+                    dice = it.getMovedDiceValue();
+                }
+
+                // Poda tradicional
+                if (beta <= alpha) {
+                    return beta;
+                }
+
+                // Poda probabilística
+                if (beta - alpha < EPSILON) {
+                    return alpha; // Asumimos que no habrá mejora significativa
+                }
+            }
+        }
+        return alpha;
+    } else { // Nodo MIN
+        for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it) {
+            Parchis hijo = *it;
+
+            double valor = Poda_AlfaBeta_Probabilistica(hijo, jugador, profundidad + 1, profundidad_max, 
+                                                        c_piece, id_piece, dice, alpha, beta, heuristic);
+
+            if (valor < beta) {
+                beta = valor;
+
+                // Poda tradicional
+                if (beta <= alpha) {
+                    return alpha;
+                }
+
+                // Poda probabilística
+                if (beta - alpha < EPSILON) {
+                    return beta; // Asumimos que no habrá mejora significativa
+                }
+            }
+        }
+        return beta;
+    }
+}
+
+bool AIPlayer::esEstadoQuieto(const Parchis &estado) const {
+   // Obtener los movimientos recientes
+   const auto& movimientos = estado.getLastMoves();
+
+   // Verificar si alguno de los movimientos recientes genera inestabilidad
+   for (const auto& movimiento : movimientos) {
+       const Box& casilla_destino = get<3>(movimiento); // Casilla de destino
+
+       // Verificar si hay movimientos inestables
+       if (estado.isEatingMove() || estado.isWall(casilla_destino) != none || estado.isSafeBox(casilla_destino)) {
+           return false; // Estado no es quieto si hay movimientos inestables
+       }
+   }
+
+   return true; // Estado es quieto si no hay movimientos inestables
+}
+
+double AIPlayer::buscarQuietud(const Parchis &actual, int jugador, int profundidad, 
+                               double alpha, double beta, Heuristic *heuristic) const {
+    ParchisBros hijos = actual.getChildren();
+
+    if (jugador == actual.getCurrentPlayerId()) { // Nodo MAX
+        for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it) {
+            Parchis hijo = *it;
+
+            // Obtener los movimientos recientes del hijo
+            const auto& movimientos = hijo.getLastMoves();
+
+            // Verificar si alguno de los movimientos recientes genera inestabilidad
+            bool es_inestable = false;
+            for (const auto& movimiento : movimientos) {
+                const Box& casilla_destino = get<3>(movimiento); // Casilla de destino
+
+                if (hijo.isEatingMove() || hijo.isWall(casilla_destino) != none || hijo.isSafeBox(casilla_destino)) {
+                    es_inestable = true;
+                    break;
+                }
+            }
+
+            // Si el estado es inestable, extender la búsqueda
+            if (es_inestable) {
+                double valor = buscarQuietud(hijo, jugador, profundidad + 1, alpha, beta, heuristic);
+
+                if (valor > alpha) {
+                    alpha = valor;
+
+                    if (beta <= alpha) {
+                        return beta; // Poda tradicional
+                    }
+                }
+            }
+        }
+        return alpha;
+    } else { // Nodo MIN
+        for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it) {
+            Parchis hijo = *it;
+
+            // Obtener los movimientos recientes del hijo
+            const auto& movimientos = hijo.getLastMoves();
+
+            // Verificar si alguno de los movimientos recientes genera inestabilidad
+            bool es_inestable = false;
+            for (const auto& movimiento : movimientos) {
+                const Box& casilla_destino = get<3>(movimiento); // Casilla de destino
+
+                if (hijo.isEatingMove() || hijo.isWall(casilla_destino) != none || hijo.isSafeBox(casilla_destino)) {
+                    es_inestable = true;
+                    break;
+                }
+            }
+
+            // Si el estado es inestable, extender la búsqueda
+            if (es_inestable) {
+                double valor = buscarQuietud(hijo, jugador, profundidad + 1, alpha, beta, heuristic);
+
+                if (valor < beta) {
+                    beta = valor;
+
+                    if (beta <= alpha) {
+                        return alpha; // Poda tradicional
+                    }
+                }
+            }
+        }
+        return beta;
+    }
+}
+
+double AIPlayer::Poda_AlfaBeta_Quiescence(const Parchis &actual, int jugador, int profundidad, int profundidad_max, 
+                                          color& c_piece, int& id_piece, int& dice, 
+                                          double alpha, double beta, Heuristic *heuristic) const {
+    if (profundidad == profundidad_max || actual.gameOver()) {
+        // Si estamos en la profundidad límite, verificamos si el estado es "quieto".
+        if (esEstadoQuieto(actual)) {
+            return heuristic->evaluate(actual, jugador); // Evaluación estática si el estado es quieto.
+        } else {
+            // Extender la búsqueda selectivamente si el estado no es quieto.
+            return buscarQuietud(actual, jugador, profundidad, alpha, beta, heuristic);
+        }
+    }
+
+    ParchisBros hijos = actual.getChildren();
+
+    if (jugador == actual.getCurrentPlayerId()) { // Nodo MAX
+        for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it) {
+            Parchis hijo = *it;
+
+            double valor = Poda_AlfaBeta_Quiescence(hijo, jugador, profundidad + 1, profundidad_max, 
+                                                    c_piece, id_piece, dice, alpha, beta, heuristic);
+
+            if (valor > alpha) {
+                alpha = valor;
+
+                if (profundidad == 0) {
+                    c_piece = it.getMovedColor();
+                    id_piece = it.getMovedPieceId();
+                    dice = it.getMovedDiceValue();
+                }
+
+                if (beta <= alpha) {
+                    return beta; // Poda tradicional.
+                }
+            }
+        }
+        return alpha;
+    } else { // Nodo MIN
+        for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it) {
+            Parchis hijo = *it;
+
+            double valor = Poda_AlfaBeta_Quiescence(hijo, jugador, profundidad + 1, profundidad_max, 
+                                                    c_piece, id_piece, dice, alpha, beta, heuristic);
+
+            if (valor < beta) {
+                beta = valor;
+
+                if (beta <= alpha) {
+                    return alpha; // Poda tradicional.
+                }
+            }
+        }
+        return beta;
+    }
+}
 
 float ValoracionTest::getHeuristic(const Parchis& estado, int jugador) const{
    // Heurística de prueba proporcionada para validar el funcionamiento del algoritmo de búsqueda.
