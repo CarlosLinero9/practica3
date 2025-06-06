@@ -5,7 +5,7 @@ const float masinf = 9999999999.0, menosinf = -9999999999.0;
 const float gana = masinf / 10.f, pierde = menosinf / 10.f;
 const int num_pieces = 2;
 const int PROFUNDIDAD_MINIMAX = 4; // Umbral maximo de profundidad para el metodo MiniMax
-const int PROFUNDIDAD_ALFABETA = 8; // Umbral maximo de profundidad para la poda Alfa_Beta
+const int PROFUNDIDAD_ALFABETA = 6; // Umbral maximo de profundidad para la poda Alfa_Beta
 const double EPSILON = 0.5; // Umbral para la poda probabilística
 
 bool AIPlayer::move(){
@@ -56,6 +56,8 @@ void AIPlayer::think(color& c_piece, int& id_piece, int& dice) const{
    float alpha = menosinf, beta = masinf; // Cotas iniciales de la poda AlfaBeta
    // Llamada a la función para la poda (los parámetros son solo una sugerencia, se pueden modificar).
    ValoracionTest valoracionTest;
+   miValoracion3 miheuristica3;
+
 
    // ----------------------------------------------------------------- //
 
@@ -68,8 +70,8 @@ void AIPlayer::think(color& c_piece, int& id_piece, int& dice) const{
       break;
    case 1:
       // Mi implementación definitiva con la que gano a todos los ninjas.
-      thinkAleatorio(c_piece, id_piece, dice);
-      //valor = Poda_Final2DefinitivaAhoraSi(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion3);
+      //thinkAleatorio(c_piece, id_piece, dice);
+      valor = Poda_Final2DefinitivaAhoraSi(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miheuristica3);
       break;
    case 2:
       // Las distintas pruebas que he realizado (primera prueba)
@@ -78,7 +80,8 @@ void AIPlayer::think(color& c_piece, int& id_piece, int& dice) const{
       break;
    case 3:
       // Las distintas pruebas que he realizado (segunda prueba)
-      thinkMejorOpcion(c_piece, id_piece, dice);
+      //thinkMejorOpcion(c_piece, id_piece, dice);
+      valor = Minimax(*actual, jugador, 0, PROFUNDIDAD_MINIMAX, c_piece, id_piece, dice, &valoracionTest);
       //valor = Poda_AlfaBeta_SegundaMejora(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, &miValoracion1);
       break;
     // ...
@@ -656,6 +659,12 @@ double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundid
     }
 }
 
+double AIPlayer::Poda_Final2DefinitivaAhoraSi(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+   int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const{
+
+      return Poda_AlfaBeta(actual, jugador, profundidad, profundidad_max, c_piece, id_piece, dice, alpha, beta, heuristic);      
+   }
+
 bool AIPlayer::esEstadoQuieto(const Parchis &estado) const {
    // Obtener los movimientos recientes
    const auto& movimientos = estado.getLastMoves();
@@ -856,4 +865,77 @@ float ValoracionTest::getHeuristic(const Parchis& estado, int jugador) const{
       // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
       return puntuacion_jugador - puntuacion_oponente;
    }
+}
+
+
+float miValoracion3::getHeuristic(const Parchis& estado, int jugador) const {
+   const int oponente = (jugador + 1) % 2;
+
+   const float PESO_META = 100.0;
+   const float PESO_DISTANCIA = -1.0;
+   const float PESO_SEGURA = 5.0;
+   const float PESO_BARRERA = 7.0;
+   const float PESO_BONUS_GOAL = 10.0;
+   const float PESO_BONUS_EAT = 20.0;
+
+   float valor_jugador = 0.0, valor_oponente = 0.0;
+
+   // Colores de ambos jugadores
+   const std::vector<color> colores_jugador = estado.getPlayerColors(jugador);
+   const std::vector<color> colores_oponente = estado.getPlayerColors(oponente);
+
+   // Fichas del jugador
+   for (color c : colores_jugador) {
+       const auto& piezas = estado.getBoard().getPieces(c);
+       for (int i = 0; i < piezas.size(); ++i) {
+           const Box& casilla = piezas[i].get_box();
+
+           // En meta
+           if (casilla.type == goal)
+               valor_jugador += PESO_META;
+
+           // Distancia a la meta
+           valor_jugador += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+
+           // Ficha en casilla segura
+           if (estado.isSafePiece(c, i))
+               valor_jugador += PESO_SEGURA;
+       }
+
+       // Barrera si las dos fichas están en la misma casilla
+       if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
+           valor_jugador += PESO_BARRERA;
+   }
+
+   // Bonus por comer o llegar a meta
+   if (estado.isEatingMove())
+       valor_jugador += PESO_BONUS_EAT;
+   if (estado.isGoalMove())
+       valor_jugador += PESO_BONUS_GOAL;
+
+   // Fichas del oponente
+   for (color c : colores_oponente) {
+       const auto& piezas = estado.getBoard().getPieces(c);
+       for (int i = 0; i < piezas.size(); ++i) {
+           const Box& casilla = piezas[i].get_box();
+
+           if (casilla.type == goal)
+               valor_oponente += PESO_META;
+
+           valor_oponente += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+
+           if (estado.isSafePiece(c, i))
+               valor_oponente += PESO_SEGURA;
+       }
+
+       if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
+           valor_oponente += PESO_BARRERA;
+   }
+
+   if (estado.isEatingMove())
+       valor_oponente += PESO_BONUS_EAT;
+   if (estado.isGoalMove())
+       valor_oponente += PESO_BONUS_GOAL;
+
+   return valor_jugador - valor_oponente;
 }

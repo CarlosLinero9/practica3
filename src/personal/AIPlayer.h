@@ -10,6 +10,11 @@ class ValoracionTest: public Heuristic{
       virtual float getHeuristic(const Parchis &estado, int jugador) const;
 };
 
+class miValoracion3: public Heuristic{
+   protected:
+      virtual float getHeuristic(const Parchis &estado, int jugador) const;
+};
+
 class AIPlayer : public Player{
 protected:
    //Id identificativo del jugador
@@ -84,6 +89,9 @@ public:
       int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
 
    double Poda_AlfaBeta_Quiescence(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
+      int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
+
+   double Poda_Final2DefinitivaAhoraSi(const Parchis &actual, int jugador, int profundidad, int profundidad_max, color& c_piece,
       int& id_piece, int& dice, double alpha, double beta, Heuristic *heuristic) const;
 
 
