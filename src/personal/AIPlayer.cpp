@@ -868,74 +868,423 @@ float ValoracionTest::getHeuristic(const Parchis& estado, int jugador) const{
 }
 
 
+// float miValoracion3::getHeuristic(const Parchis& estado, int jugador) const {
+//    const int oponente = (jugador + 1) % 2;
+
+//    const float PESO_META = 100.0;
+//    const float PESO_DISTANCIA = -1.0;
+//    const float PESO_SEGURA = 5.0;
+//    const float PESO_BARRERA = 7.0;
+//    const float PESO_BONUS_GOAL = 10.0;
+//    const float PESO_BONUS_EAT = 20.0;
+
+//    float valor_jugador = 0.0, valor_oponente = 0.0;
+
+//    // Colores de ambos jugadores
+//    const std::vector<color> colores_jugador = estado.getPlayerColors(jugador);
+//    const std::vector<color> colores_oponente = estado.getPlayerColors(oponente);
+
+//    // Fichas del jugador
+//    for (color c : colores_jugador) {
+//        const auto& piezas = estado.getBoard().getPieces(c);
+//        for (int i = 0; i < piezas.size(); ++i) {
+//            const Box& casilla = piezas[i].get_box();
+
+//            // En meta
+//            if (casilla.type == goal)
+//                valor_jugador += PESO_META;
+
+//            // Distancia a la meta
+//            valor_jugador += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+
+//            // Ficha en casilla segura
+//            if (estado.isSafePiece(c, i))
+//                valor_jugador += PESO_SEGURA;
+//        }
+
+//        // Barrera si las dos fichas están en la misma casilla
+//        if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
+//            valor_jugador += PESO_BARRERA;
+//    }
+
+//    // Bonus por comer o llegar a meta
+//    if (estado.isEatingMove())
+//        valor_jugador += PESO_BONUS_EAT;
+//    if (estado.isGoalMove())
+//        valor_jugador += PESO_BONUS_GOAL;
+
+//    // Fichas del oponente
+//    for (color c : colores_oponente) {
+//        const auto& piezas = estado.getBoard().getPieces(c);
+//        for (int i = 0; i < piezas.size(); ++i) {
+//            const Box& casilla = piezas[i].get_box();
+
+//            if (casilla.type == goal)
+//                valor_oponente += PESO_META;
+
+//            valor_oponente += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+
+//            if (estado.isSafePiece(c, i))
+//                valor_oponente += PESO_SEGURA;
+//        }
+
+//        if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
+//            valor_oponente += PESO_BARRERA;
+//    }
+
+//    if (estado.isEatingMove())
+//        valor_oponente += PESO_BONUS_EAT;
+//    if (estado.isGoalMove())
+//        valor_oponente += PESO_BONUS_GOAL;
+
+//    return valor_jugador - valor_oponente;
+// }
+
+// float miValoracion3::getHeuristic(const Parchis& estado, int jugador) const {
+//    const int oponente = (jugador + 1) % 2;
+
+//    const float PESO_META = 100.0;
+//    const float PESO_DISTANCIA = -1.0;
+//    const float PESO_SEGURA = 5.0;
+//    const float PESO_BARRERA = 7.0;
+//    const float PESO_BONUS_GOAL = 10.0;
+//    const float PESO_BONUS_EAT = 20.0;
+//    const float PESO_CASA = -60.0;
+//    const float PESO_REBOTES = -5.0;
+//    const float PESO_MOVILIDAD = 8.0;
+//    const float PESO_TURNO_DOBLE = 20.0;
+//    const float PESO_COMER_POSIBLE = 100.0;
+
+//    float valor_jugador = 0.0, valor_oponente = 0.0;
+
+//    const std::vector<color> colores_jugador = estado.getPlayerColors(jugador);
+//    const std::vector<color> colores_oponente = estado.getPlayerColors(oponente);
+
+//    // Fichas del jugador
+//    for (color c : colores_jugador) {
+//        const auto& piezas = estado.getBoard().getPieces(c);
+
+//        // Rebotes y movilidad
+//        valor_jugador += PESO_REBOTES * estado.getBounces(c);
+//        valor_jugador += PESO_MOVILIDAD * estado.getAvailableNormalDices(jugador).size();
+
+//        for (int i = 0; i < piezas.size(); ++i) {
+//            const Box& casilla = piezas[i].get_box();
+
+//            if (casilla.type == goal)
+//                valor_jugador += PESO_META;
+
+//            valor_jugador += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+
+//            if (estado.isSafePiece(c, i))
+//                valor_jugador += PESO_SEGURA;
+
+//            if (casilla.type == home)
+//                valor_jugador += PESO_CASA;
+
+//            // Comer posible
+//            for (color c_op : colores_oponente) {
+//                for (int j = 0; j < 2; ++j) {
+//                    int dist = estado.distanceBoxtoBox(c, i, c_op, j);
+//                    if (dist != -1 && dist <= 6 && !estado.isSafePiece(c_op, j))
+//                        valor_jugador += PESO_COMER_POSIBLE;
+//                }
+//            }
+//        }
+
+//        if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
+//            valor_jugador += PESO_BARRERA;
+//    }
+
+//    if (estado.isEatingMove())
+//        valor_jugador += PESO_BONUS_EAT;
+//    if (estado.isGoalMove())
+//        valor_jugador += PESO_BONUS_GOAL;
+
+//    // Turno doble
+//    int turno = estado.getTurn();
+//    bool turno_doble = (jugador == 0 && (turno % 4 == 0 || turno % 4 == 3)) ||
+//                       (jugador == 1 && (turno % 4 == 1 || turno % 4 == 2));
+//    if (turno_doble)
+//        valor_jugador += PESO_TURNO_DOBLE;
+
+//    // Fichas del oponente
+//    for (color c : colores_oponente) {
+//        const auto& piezas = estado.getBoard().getPieces(c);
+
+//        valor_oponente += PESO_REBOTES * estado.getBounces(c);
+//        valor_oponente += PESO_MOVILIDAD * estado.getAvailableNormalDices(oponente).size();
+
+//        for (int i = 0; i < piezas.size(); ++i) {
+//            const Box& casilla = piezas[i].get_box();
+
+//            if (casilla.type == goal)
+//                valor_oponente += PESO_META;
+
+//            valor_oponente += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+
+//            if (estado.isSafePiece(c, i))
+//                valor_oponente += PESO_SEGURA;
+
+//            if (casilla.type == home)
+//                valor_oponente += PESO_CASA;
+
+//            // Comer posible
+//            for (color c_j : colores_jugador) {
+//                for (int j = 0; j < 2; ++j) {
+//                    int dist = estado.distanceBoxtoBox(c, i, c_j, j);
+//                    if (dist != -1 && dist <= 6 && !estado.isSafePiece(c_j, j))
+//                        valor_oponente += PESO_COMER_POSIBLE;
+//                }
+//            }
+//        }
+
+//        if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
+//            valor_oponente += PESO_BARRERA;
+//    }
+
+//    if (estado.isEatingMove())
+//        valor_oponente += PESO_BONUS_EAT;
+//    if (estado.isGoalMove())
+//        valor_oponente += PESO_BONUS_GOAL;
+
+//    return valor_jugador - valor_oponente;
+// }
+
+// float miValoracion3::getHeuristic(const Parchis& estado, int jugador) const {
+//    const int oponente = (jugador + 1) % 2;
+
+//    const float PESO_META = 100.0;
+//    const float PESO_DISTANCIA = -1.0;
+//    const float PESO_SEGURA = 5.0;
+//    const float PESO_BARRERA = 7.0;
+//    const float PESO_BONUS_GOAL = 10.0;
+//    const float PESO_BONUS_EAT = 20.0;
+//    const float PESO_CASA = -60.0;
+//    const float PESO_REBOTES = -5.0;
+//    const float PESO_MOVILIDAD = 8.0;
+//    const float PESO_TURNO_DOBLE = 20.0;
+//    const float PESO_COMER_POSIBLE = 100.0;
+
+//    float valor_jugador = 0.0, valor_oponente = 0.0;
+
+//    const std::vector<color> colores_jugador = estado.getPlayerColors(jugador);
+//    const std::vector<color> colores_oponente = estado.getPlayerColors(oponente);
+
+//    // Fichas del jugador
+//    for (color c : colores_jugador) {
+//        const auto& piezas = estado.getBoard().getPieces(c);
+
+//        // Rebotes y movilidad
+//        valor_jugador += PESO_REBOTES * estado.getBounces(c);
+//        valor_jugador += PESO_MOVILIDAD * estado.getAvailableNormalDices(jugador).size();
+
+//        for (int i = 0; i < piezas.size(); ++i) {
+//            const Box& casilla = piezas[i].get_box();
+
+//            if (casilla.type == goal)
+//                valor_jugador += PESO_META;
+
+//            valor_jugador += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+
+//            if (estado.isSafePiece(c, i))
+//                valor_jugador += PESO_SEGURA;
+
+//            if (casilla.type == home)
+//                valor_jugador += PESO_CASA;
+
+//            // Comer posible
+//            for (color c_op : colores_oponente) {
+//                for (int j = 0; j < 2; ++j) {
+//                    int dist = estado.distanceBoxtoBox(c, i, c_op, j);
+//                    if (dist != -1 && dist <= 6 && !estado.isSafePiece(c_op, j))
+//                        valor_jugador += PESO_COMER_POSIBLE;
+//                }
+//            }
+//        }
+
+//        if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
+//            valor_jugador += PESO_BARRERA;
+//    }
+
+//    if (estado.isEatingMove())
+//        valor_jugador += PESO_BONUS_EAT;
+//    if (estado.isGoalMove())
+//        valor_jugador += PESO_BONUS_GOAL;
+
+//    // Turno doble
+//    int turno = estado.getTurn();
+//    bool turno_doble = (jugador == 0 && (turno % 4 == 0 || turno % 4 == 3)) ||
+//                       (jugador == 1 && (turno % 4 == 1 || turno % 4 == 2));
+//    if (turno_doble)
+//        valor_jugador += PESO_TURNO_DOBLE;
+
+//    // Fichas del oponente
+//    for (color c : colores_oponente) {
+//        const auto& piezas = estado.getBoard().getPieces(c);
+
+//        valor_oponente += PESO_REBOTES * estado.getBounces(c);
+//        valor_oponente += PESO_MOVILIDAD * estado.getAvailableNormalDices(oponente).size();
+
+//        for (int i = 0; i < piezas.size(); ++i) {
+//            const Box& casilla = piezas[i].get_box();
+
+//            if (casilla.type == goal)
+//                valor_oponente += PESO_META;
+
+//            valor_oponente += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+
+//            if (estado.isSafePiece(c, i))
+//                valor_oponente += PESO_SEGURA;
+
+//            if (casilla.type == home)
+//                valor_oponente += PESO_CASA;
+
+//            // Comer posible
+//            for (color c_j : colores_jugador) {
+//                for (int j = 0; j < 2; ++j) {
+//                    int dist = estado.distanceBoxtoBox(c, i, c_j, j);
+//                    if (dist != -1 && dist <= 6 && !estado.isSafePiece(c_j, j))
+//                        valor_oponente += PESO_COMER_POSIBLE;
+//                }
+//            }
+//        }
+
+//        if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
+//            valor_oponente += PESO_BARRERA;
+//    }
+
+//    if (estado.isEatingMove())
+//        valor_oponente += PESO_BONUS_EAT;
+//    if (estado.isGoalMove())
+//        valor_oponente += PESO_BONUS_GOAL;
+
+//    float resultado = valor_jugador - valor_oponente;
+
+//    // ✅ Compensación por desventaja de ser segundo al inicio
+//    if (jugador == 1 && estado.getTurn() <= 3) {
+//       resultado += std::max(0.0f, 20.0f - estado.getTurn() * 5.0f);
+//    }
+
+//    return resultado;
+// }
+
 float miValoracion3::getHeuristic(const Parchis& estado, int jugador) const {
    const int oponente = (jugador + 1) % 2;
+   int turno = estado.getTurn();
 
-   const float PESO_META = 100.0;
-   const float PESO_DISTANCIA = -1.0;
-   const float PESO_SEGURA = 5.0;
-   const float PESO_BARRERA = 7.0;
-   const float PESO_BONUS_GOAL = 10.0;
-   const float PESO_BONUS_EAT = 20.0;
+   float PESO_META = 100.0;
+   float PESO_DISTANCIA = -1.0;
+   float PESO_SEGURA = 5.0;
+   float PESO_BARRERA = 7.0;
+   float PESO_BONUS_GOAL = 10.0;
+   float PESO_BONUS_EAT = 20.0;
+   float PESO_CASA = -60.0;
+   float PESO_REBOTES = -5.0;
+   float PESO_MOVILIDAD = 8.0;
+   float PESO_TURNO_DOBLE = 20.0;
+   float PESO_COMER_POSIBLE = 100.0;
+   float PESO_VULNERABLE = -100.0;
+   float PESO_BLOQUEO = 15.0;
+
+   // Ajuste en primeros turnos
+   if (turno < 5) {
+       PESO_COMER_POSIBLE = 60.0;
+       PESO_DISTANCIA = -0.6;
+   }
 
    float valor_jugador = 0.0, valor_oponente = 0.0;
 
-   // Colores de ambos jugadores
    const std::vector<color> colores_jugador = estado.getPlayerColors(jugador);
    const std::vector<color> colores_oponente = estado.getPlayerColors(oponente);
 
-   // Fichas del jugador
    for (color c : colores_jugador) {
        const auto& piezas = estado.getBoard().getPieces(c);
+       valor_jugador += PESO_REBOTES * estado.getBounces(c);
+       valor_jugador += PESO_MOVILIDAD * estado.getAvailableNormalDices(jugador).size();
+
        for (int i = 0; i < piezas.size(); ++i) {
-           const Box& casilla = piezas[i].get_box();
+           const Box& b = piezas[i].get_box();
 
-           // En meta
-           if (casilla.type == goal)
+           if (b.type == goal)
                valor_jugador += PESO_META;
+           else
+               valor_jugador += PESO_DISTANCIA * estado.distanceToGoal(c, i);
 
-           // Distancia a la meta
-           valor_jugador += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+           if (estado.isSafePiece(c, i)) valor_jugador += PESO_SEGURA;
+           if (b.type == home) valor_jugador += PESO_CASA;
+           if (b.type == final_queue) valor_jugador += 40;
 
-           // Ficha en casilla segura
-           if (estado.isSafePiece(c, i))
-               valor_jugador += PESO_SEGURA;
+           // Comer posible y vulnerabilidad
+           for (color c_op : colores_oponente) {
+               for (int j = 0; j < 2; ++j) {
+                   int d = estado.distanceBoxtoBox(c, i, c_op, j);
+                   if (d != -1 && d <= 6 && !estado.isSafePiece(c_op, j))
+                       valor_jugador += PESO_COMER_POSIBLE;
+
+                   int rev = estado.distanceBoxtoBox(c_op, j, c, i);
+                   if (rev != -1 && rev <= 6 && !estado.isSafePiece(c, i))
+                       valor_jugador += PESO_VULNERABLE;
+
+                   // Bloqueo
+                   if (d != -1 && d < 6 && !estado.isSafePiece(c_op, j))
+                       valor_jugador += PESO_BLOQUEO;
+               }
+           }
        }
 
-       // Barrera si las dos fichas están en la misma casilla
        if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
            valor_jugador += PESO_BARRERA;
    }
 
-   // Bonus por comer o llegar a meta
-   if (estado.isEatingMove())
-       valor_jugador += PESO_BONUS_EAT;
-   if (estado.isGoalMove())
-       valor_jugador += PESO_BONUS_GOAL;
+   if (estado.isEatingMove()) valor_jugador += PESO_BONUS_EAT;
+   if (estado.isGoalMove()) valor_jugador += PESO_BONUS_GOAL;
 
-   // Fichas del oponente
+   // Turno doble
+   bool turno_doble = (jugador == 0 && (turno % 4 == 0 || turno % 4 == 3)) ||
+                      (jugador == 1 && (turno % 4 == 1 || turno % 4 == 2));
+   if (turno_doble) valor_jugador += PESO_TURNO_DOBLE;
+
+   // Oponente
    for (color c : colores_oponente) {
        const auto& piezas = estado.getBoard().getPieces(c);
+       valor_oponente += PESO_REBOTES * estado.getBounces(c);
+       valor_oponente += PESO_MOVILIDAD * estado.getAvailableNormalDices(oponente).size();
+
        for (int i = 0; i < piezas.size(); ++i) {
-           const Box& casilla = piezas[i].get_box();
+           const Box& b = piezas[i].get_box();
 
-           if (casilla.type == goal)
+           if (b.type == goal)
                valor_oponente += PESO_META;
+           else
+               valor_oponente += PESO_DISTANCIA * estado.distanceToGoal(c, i);
 
-           valor_oponente += PESO_DISTANCIA * estado.distanceToGoal(c, i);
+           if (estado.isSafePiece(c, i)) valor_oponente += PESO_SEGURA;
+           if (b.type == home) valor_oponente += PESO_CASA;
+           if (b.type == final_queue) valor_oponente += 40;
 
-           if (estado.isSafePiece(c, i))
-               valor_oponente += PESO_SEGURA;
+           for (color c_j : colores_jugador) {
+               for (int j = 0; j < 2; ++j) {
+                   int d = estado.distanceBoxtoBox(c, i, c_j, j);
+                   if (d != -1 && d <= 6 && !estado.isSafePiece(c_j, j))
+                       valor_oponente += PESO_COMER_POSIBLE;
+
+                   int rev = estado.distanceBoxtoBox(c_j, j, c, i);
+                   if (rev != -1 && rev <= 6 && !estado.isSafePiece(c, i))
+                       valor_oponente += PESO_VULNERABLE;
+
+                   if (d != -1 && d < 6 && !estado.isSafePiece(c_j, j))
+                       valor_oponente += PESO_BLOQUEO;
+               }
+           }
        }
 
        if (piezas.size() >= 2 && piezas[0].get_box() == piezas[1].get_box())
            valor_oponente += PESO_BARRERA;
    }
 
-   if (estado.isEatingMove())
-       valor_oponente += PESO_BONUS_EAT;
-   if (estado.isGoalMove())
-       valor_oponente += PESO_BONUS_GOAL;
+   if (estado.isEatingMove()) valor_oponente += PESO_BONUS_EAT;
+   if (estado.isGoalMove()) valor_oponente += PESO_BONUS_GOAL;
 
    return valor_jugador - valor_oponente;
 }
